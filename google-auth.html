@@ -3,98 +3,86 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Authenticating...</title>
+    <title>Check Google Code</title>
     <style>
         body {
             font-family: Arial, sans-serif;
-            max-width: 600px;
-            margin: 0 auto;
-            padding: 2rem 1rem;
-            text-align: center;
-            background-color: #f5f5f5;
-        }
-        .container {
-            background-color: white;
-            padding: 2rem;
-            border-radius: 10px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-        }
-        .spinner {
-            border: 5px solid #f3f3f3;
-            border-top: 5px solid #4285F4;
-            border-radius: 50%;
-            width: 50px;
-            height: 50px;
-            animation: spin 1s linear infinite;
+            max-width: 800px;
             margin: 2rem auto;
+            padding: 0 1rem;
+            text-align: center;
         }
-        @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
+        .code-box {
+            background-color: #f8f9fa;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            padding: 1.5rem;
+            margin: 2rem 0;
+            word-break: break-all; /* Ensures long codes wrap */
+            text-align: left;
         }
-        .error {
-            color: #dc3545;
-            margin-top: 1rem;
-        }
-        .instructions {
-            margin-top: 1rem;
-            color: #666;
-            font-size: 0.9rem;
-        }
+        .success { color: #28a745; font-size: 1.2rem; }
+        .error { color: #dc3545; font-size: 1.2rem; }
+        .instructions { color: #6c757d; margin-top: 1rem; }
     </style>
 </head>
 <body>
-    <div class="container">
-        <h1>Authenticating...</h1>
-        <div class="spinner"></div>
-        <p>Please wait while we connect you to the app.</p>
-        <p id="status" class="instructions">Processing authentication...</p>
-        <p id="error" class="error"></p>
+    <h1>Google Auth Code Check</h1>
+
+    <!-- Success/Error Status -->
+    <div id="status" class="success">Checking for code...</div>
+
+    <!-- Code Display Box (will show the code if found) -->
+    <div id="codeDisplay" class="code-box">
+        Waiting for Google to send the code...
     </div>
 
+    <!-- Instructions -->
+    <p class="instructions">
+        If you see a code above, the GitHub page received it!
+        If not, check your Google Console settings.
+    </p>
+
     <script>
-        // Configuration - REPLACE THESE VALUES!
-        const EXPO_DEV_URL = "exp://192.168.5.4:8081"; // From Expo Go settings
-        const GITHUB_REDIRECT_URI = "https://659760ouo.github.io/GoogleAuth/"; // This page's URL
-
-        // DOM Elements
+        // Get elements to update
         const statusElement = document.getElementById('status');
-        const errorElement = document.getElementById('error');
+        const codeDisplayElement = document.getElementById('codeDisplay');
 
-        // Extract parameters from URL
+        // Step 1: Extract the "code" parameter from the browser's URL
         const urlParams = new URLSearchParams(window.location.search);
-        const authCode = urlParams.get('code');
-        const error = urlParams.get('error');
+        const googleCode = urlParams.get('code'); // This pulls the code from the URL
+        const googleError = urlParams.get('error');
 
-        // Handle errors from Google
-        if (error) {
-            statusElement.textContent = "Authentication failed";
-            errorElement.textContent = `Error: ${urlParams.get('error_description') || error}`;
-            return;
-        }
+        // Step 2: Check if a code was found and print it
+        if (googleError) {
+            // Case 1: Google sent an error (e.g., user canceled)
+            statusElement.textContent = "❌ Error from Google";
+            statusElement.className = "error";
+            codeDisplayElement.innerHTML = `Error: ${googleError}<br><br>Description: ${urlParams.get('error_description') || "No additional details"}`;
+        } else if (googleCode) {
+            // Case 2: Code found! Print it on the page
+            statusElement.textContent = "✅ Code received successfully!";
+            statusElement.className = "success";
+            codeDisplayElement.innerHTML = `
+                <strong>Google Authorization Code:</strong><br><br>
+                ${googleCode}<br><br>
+                <strong>Next Step:</strong> Forwarding to Expo app...
+            `;
 
-        // Handle successful code reception
-        if (authCode) {
-            statusElement.textContent = "Redirecting to app...";
-            console.log('Code received', authCode);
-            // Create deep link with authorization code
-            const deepLink = `${EXPO_DEV_URL}?googleCode=${encodeURIComponent(authCode)}`;
+            // Optional: Still forward to Expo (keep your original deep link logic)
+            const EXPO_DEV_URL = "exp://192.168.5.4:8081"; // Replace with your Expo URL
+            const expoDeepLink = `${EXPO_DEV_URL}?googleCode=${encodeURIComponent(googleCode)}`;
             
-            // Try to open the Expo app
-            window.location.href = deepLink;
-
-            // Fallback if app doesn't open after 5 seconds
+            // Auto-redirect to Expo after 3 seconds (so you have time to read the code)
             setTimeout(() => {
-                statusElement.textContent = "If you're not redirected automatically:";
-                errorElement.textContent = "Please open the app manually to complete sign-in";
-            }, 5000);
+                window.location.href = expoDeepLink;
+            }, 3000);
         } else {
-            // No code or error received
-            statusElement.textContent = "No authentication code received";
-            errorElement.textContent = "Please try signing in again from the app";
+            // Case 3: No code found (e.g., you opened the page directly)
+            statusElement.textContent = "⚠️ No code found";
+            statusElement.className = "error";
+            codeDisplayElement.textContent = "The URL does not contain a Google authorization code. Please sign in from the Expo app.";
         }
     </script>
 </body>
 </html>
-
-
